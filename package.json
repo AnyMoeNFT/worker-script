@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "name": "worker-script",
+  "version": "1.0.0",
+  "description": "anymoe centralized backend for indexing datas, hosted on cloudflare workers",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --write '**/*.{js,css,json,md}'"
+  },
+  "author": "Rorical <rorical@shugetsu.space>",
+  "license": "GPLv3",
+  "devDependencies": {
+    "prettier": "^1.18.2"
+  },
+  "dependencies": {
+    "is-ipfs": "^6.0.2",
+    "realm-web": "^1.5.1",
+    "web3-eth-abi": "^1.6.1"
+  }
+}

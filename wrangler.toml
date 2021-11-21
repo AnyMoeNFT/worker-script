@@ -1,0 +1,13 @@
+name = "worker-script"
+type = "webpack"
+
+account_id = ""
+workers_dev = true
+route = ""
+zone_id = ""
+compatibility_date = "2021-11-20"
+kv_namespaces = [
+  { binding = "STATE", id = "fd5f3f0521cb422a9c717f8c7785e5e3" },
+]
+
+webpack_config = "webpack.config.js"
