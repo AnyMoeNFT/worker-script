@@ -1,6 +1,6 @@
 import Web3EthAbi from 'web3-eth-abi'
 import * as Realm from "realm-web"
-import { fetchEthereum, fetchIPFSJson } from './utils/utils'
+import { fetchEthereum, fetchIPFSJson, validateERC1155Json, getKnownProperties } from './utils/utils'
 import isIPFS from 'is-ipfs'
 
 const AnyMoeNFT_URI = [
@@ -37,36 +37,60 @@ async function handleScheduled(event) {
     "method":"eth_blockNumber",
     "params":[]
   }))["result"]
-  //let LastBlockHeight = await STATE.get("LastBlockHeight")
+  let LastBlockHeight = await STATE.get("LastBlockHeight")
   await STATE.put("LastBlockHeight", NowBlockHeight)
-  let LastBlockHeight = "earliest"
   
   let logs = (await fetchEthereum({
     "method":"eth_getLogs",
     "params":[{"fromBlock": LastBlockHeight, "toBlock": NowBlockHeight, "topics":[AnyMoeNFT_URITopic], "address": AnyMoeNFTContractAddress}]
   }))["result"]
+  
+ 
   for(let log of logs) {
-    if (log["data"] == "0x") continue;
+    if (log["data"] === "0x") continue;
     log["topics"].shift()
     let parsedLog = Web3EthAbi.decodeLog(AnyMoeNFT_URI, log["data"], log["topics"])
     console.log(parsedLog)
-    /*
-    if (isIPFS.path(parsedLog["uri"])) {
-      let metadata = await fetchIPFSJson(parsedLog["uri"])
-      await Creator.updateOne(
-        {
-          "_id": parsedLog["address"]
-        },
-        {
-          $set: { 
-            "name": metadata["name"],
-            "bio": metadata["bio"]
-          }
-        },
-        { upsert: true }
-      )
+    
+    let uri = parsedLog["_value"].split("://")
+
+    if (uri.length != 2) continue;
+    let scheme = uri[0]
+    let path = uri[1]
+    let metadata = null
+    console.log(uri)
+    
+    switch (scheme){
+      case "ipfs":
+        path = "/ipfs/" + path
+        if (isIPFS.path(path)) {
+          metadata = await fetchIPFSJson(path)
+        }
+      break
+      case "ipns":
+        path = "/ipns/" + path
+        if (isIPFS.path(path)) {
+          metadata = await fetchIPFSJson(path)
+        }
+      
     }
-    */
+
+    if (metadata === null) continue;
+    if(!validateERC1155Json(metadata)) continue;
+
+    let tokenData = getKnownProperties(metadata, ["name", "description"])
+    
+    
+    await Token.updateOne(
+      {
+        "_id": parsedLog["_id"]
+      },
+      {
+        $set: tokenData
+      },
+      { upsert: true }
+    )
+  
   }
 }
 

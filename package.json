@@ -11,9 +11,13 @@
   "author": "Rorical <rorical@shugetsu.space>",
   "license": "GPLv3",
   "devDependencies": {
-    "prettier": "^1.18.2"
+    "prettier": "^1.19.1"
   },
   "dependencies": {
+    "@cfworker/json-schema": "^1.10.2",
+    "eslint": "^8.3.0",
+    "eslint-config-alloy": "^4.4.0",
+    "eslint-config-prettier": "^8.3.0",
     "is-ipfs": "^6.0.2",
     "realm-web": "^1.5.1",
     "web3-eth-abi": "^1.6.1"

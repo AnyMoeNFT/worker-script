@@ -1,3 +1,8 @@
+import { Validator } from '@cfworker/json-schema'
+import ERC1155JsonSchema from '../extra/ERC1155-Metadata-Json-Schema.json'
+
+const ERC1155JsonValidator = new Validator(ERC1155JsonSchema)
+
 async function fetchEthereum(data) {
     data["jsonrpc"] = "2.0"
     data["id"] = 1
@@ -12,13 +17,29 @@ async function fetchEthereum(data) {
 }
 
 async function fetchIPFSJson(cidPath) {
-    let res = await fetch("https://cloudflare-ipfs.com" + cidPath).catch(function(error) {
-        return {}
-    })
-    return await res.json()
+    try {
+        let res = await fetch("https://cloudflare-ipfs.com" + cidPath)
+        return await res.json()
+    } catch (e) {
+        return null
+    }
+}
+
+function validateERC1155Json(meta) {
+    return ERC1155JsonValidator.validate(meta)["valid"]
+}
+
+function getKnownProperties(from, properties) {
+    let res = {}
+    for (let pr of properties) {
+        if (from.hasOwnProperty(pr)) res[pr] = from[pr]
+    }
+    return res
 }
 
 export {
     fetchEthereum,
-    fetchIPFSJson
+    fetchIPFSJson,
+    validateERC1155Json,
+    getKnownProperties
 }
