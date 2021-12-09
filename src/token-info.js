@@ -7,11 +7,22 @@ import {
 } from './utils/utils'
 import isIPFS from 'is-ipfs'
 import AnyMoeNFTMintNFTABI from './extra/AnyMoeNFT-MintNFT-ABI.json'
+import AnyMoeNFTTransferBatchABI from './extra/AnyMoeNFT-TransferBatch-ABI.json'
+import AnyMoeNFTTransferSingleABI from './extra/AnyMoeNFT-TransferSingle-ABI.json'
 
 const AnyMoeNFTMintTopic = Web3EthAbi.encodeEventSignature(AnyMoeNFTMintNFTABI)
+const AnyMoeNFTTransferBatchTopic = Web3EthAbi.encodeEventSignature(
+  AnyMoeNFTTransferBatchABI,
+)
+const AnyMoeNFTTransferSingleTopic = Web3EthAbi.encodeEventSignature(
+  AnyMoeNFTTransferSingleABI,
+)
 
 async function fetchNewTokenInfo(mongodb, lbh, nbh) {
-  const Token = mongodb.db('AnyMoe').collection('Token')
+  const Token = mongodb
+    .mongoClient('mongodb-atlas')
+    .db('AnyMoe')
+    .collection('Token')
   let logs = (
     await fetchEthereum({
       method: 'eth_getLogs',
@@ -30,7 +41,7 @@ async function fetchNewTokenInfo(mongodb, lbh, nbh) {
     if (log['data'] === '0x') continue
     log['topics'].shift()
     let mintLog = Web3EthAbi.decodeLog(
-      AnyMoeNFTMintNFTABI["inputs"],
+      AnyMoeNFTMintNFTABI['inputs'],
       log['data'],
       log['topics'],
     )
@@ -62,19 +73,14 @@ async function fetchNewTokenInfo(mongodb, lbh, nbh) {
       'name',
       'description',
       'image',
-      'decimals',
       'properties',
     ])
+    let owners = {}
+    owners[mintLog['to']] = parseInt(mintLog['amount'])
     let ownerData = {
       creator: mintLog['creator'],
-      totalAmount: mintLog['amount'],
-      owners: [
-        {
-          address: mintLog['to'],
-          amount: mintLog['amount'],
-        },
-      ],
-      auctions: [],
+      totalAmount: parseInt(mintLog['amount']),
+      owners: owners,
     }
 
     await Token.insertOne(
@@ -90,7 +96,10 @@ async function fetchNewTokenInfo(mongodb, lbh, nbh) {
 }
 
 async function fetchTokenTransfer(mongodb, lbh, nbh) {
-  const Token = mongodb.db('AnyMoe').collection('Token')
+  const Token = mongodb
+    .mongoClient('mongodb-atlas')
+    .db('AnyMoe')
+    .collection('Token')
   let logs = (
     await fetchEthereum({
       method: 'eth_getLogs',
@@ -98,12 +107,72 @@ async function fetchTokenTransfer(mongodb, lbh, nbh) {
         {
           fromBlock: lbh,
           toBlock: nbh,
-          topics: [AnyMoeNFTMintTopic],
+          topics: [AnyMoeNFTTransferSingleTopic],
           address: ANYMOENFT_CONTRACT_ADDRESS,
         },
       ],
     })
   )['result']
+  for (let log of logs) {
+    if (log['data'] === '0x') continue
+    log['topics'].shift()
+    let transferSingleLog = Web3EthAbi.decodeLog(
+      AnyMoeNFTTransferSingleABI['inputs'],
+      log['data'],
+      log['topics'],
+    )
+    let incOp = {}
+    incOp['owners.' + transferSingleLog['from']] = -parseInt(
+      transferSingleLog['value'],
+    )
+    incOp['owners.' + transferSingleLog['to']] = parseInt(
+      transferSingleLog['value'],
+    )
+    await Token.updateOne(
+      { _id: transferSingleLog['id'] },
+      {
+        $inc: incOp,
+      },
+    )
+  }
+
+  logs = (
+    await fetchEthereum({
+      method: 'eth_getLogs',
+      params: [
+        {
+          fromBlock: lbh,
+          toBlock: nbh,
+          topics: [AnyMoeNFTTransferBatchTopic],
+          address: ANYMOENFT_CONTRACT_ADDRESS,
+        },
+      ],
+    })
+  )['result']
+  for (let log of logs) {
+    if (log['data'] === '0x') continue
+    log['topics'].shift()
+    let transferBatchLog = Web3EthAbi.decodeLog(
+      AnyMoeNFTTransferBatchABI['inputs'],
+      log['data'],
+      log['topics'],
+    )
+    for (let i = 0; i < transferBatchLog['ids'].length; i++) {
+      incOp = {}
+      incOp['owners.' + transferBatchLog['from']] = -parseInt(
+        transferBatchLog['values'][i],
+      )
+      incOp['owners.' + transferBatchLog['to']] = parseInt(
+        transferBatchLog['values'][i],
+      )
+      await Token.updateOne(
+        { _id: transferBatchLog['ids'][i] },
+        {
+          $inc: incOp,
+        },
+      )
+    }
+  }
 }
 
 export default {
