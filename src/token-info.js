@@ -6,9 +6,11 @@ import {
   getKnownProperties,
 } from './utils/utils'
 import isIPFS from 'is-ipfs'
-import AnyMoeNFTMintNFTABI from './extra/AnyMoeNFT-MintNFT-ABI.json'
-import AnyMoeNFTTransferBatchABI from './extra/AnyMoeNFT-TransferBatch-ABI.json'
-import AnyMoeNFTTransferSingleABI from './extra/AnyMoeNFT-TransferSingle-ABI.json'
+import AnyMoeNFTABI from './extra/AnyMoeNFTABI.json'
+
+const AnyMoeNFTMintNFTABI = AnyMoeNFTABI[2]
+const AnyMoeNFTTransferBatchABI = AnyMoeNFTABI[3]
+const AnyMoeNFTTransferSingleABI = AnyMoeNFTABI[4]
 
 const AnyMoeNFTMintTopic = Web3EthAbi.encodeEventSignature(AnyMoeNFTMintNFTABI)
 const AnyMoeNFTTransferBatchTopic = Web3EthAbi.encodeEventSignature(
